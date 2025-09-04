@@ -26,14 +26,17 @@ def AStar(problem):
     g0 = 0
     f0 = g0 + problem.CallHeuristic(start)
     frontier.put((f0, next(counter), Node(problem.initialState)))
-    best_g = {start : g0} #this is supposed to be a map?
+    best_g = {start : g0} 
     while not frontier.empty():
         f, _, node = frontier.get()
         g = best_g[node.state]
         if problem.GoalTest(node.state):
+            path = []
             stats.solutionCost = g
-            print("path found")
-            pass # return path from node to initialState
+            while node:
+                path.append(node)
+                node = node.parent
+            return path[::-1]
         for action in problem.Actions(node.state):
             newState = problem.Transition(node.state, action)
             gPrime = problem.StepCost(node.state, action, newState)

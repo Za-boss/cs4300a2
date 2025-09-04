@@ -34,7 +34,7 @@ class puzzleProblem:
         row, col = divmod(nullIndex, 3)
         availableMoves = []
         for move, (x, y) in moves.items():
-            newRow, newCol = row + x, row + y
+            newRow, newCol = row + x, col + y
             if 0 <= newRow < 3 and 0 <= newCol < 3:
                 availableMoves.append(move)
         return availableMoves
