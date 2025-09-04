@@ -1,31 +1,47 @@
 from queue import PriorityQueue
 from dataclasses import dataclass
 from typing import Any, Optional
+import itertools
+
+counter = itertools.count()
 
 @dataclass
 class Node:
     state : Any
-    action: Optional[Any]
-    parent : Optional[Any]
+    action: Optional[Any] = None
+    parent : Optional[Any] = None
 
 @dataclass
 class AStarStats:
-    nodes_generated = 0
-    nodes_expanded = 0
-    max_frontier_size = 0
-    solution_depth: Optional[int] = None
-    solution_cost: Optional[int] = None
+    nodesGenerated = 0
+    nodesExpanded = 0
+    maxFrontierSize = 0
+    solutionDepth: Optional[int] = None
+    solutionCost: Optional[int] = None
 
-def AStar():
+def AStar(problem):
     stats = AStarStats()
     frontier = PriorityQueue()
-    seen = set()
-    best_g = None #this is supposed to be a map?
-    while frontier:
-        pass # do the search
+    start = problem.initialState
+    g0 = 0
+    f0 = g0 + problem.CallHeuristic(start)
+    frontier.put((f0, next(counter), Node(problem.initialState)))
+    best_g = {start : g0} #this is supposed to be a map?
+    while not frontier.empty():
+        f, _, node = frontier.get()
+        g = best_g[node.state]
+        if problem.GoalTest(node.state):
+            stats.solutionCost = g
+            print("path found")
+            pass # return path from node to initialState
+        for action in problem.Actions(node.state):
+            newState = problem.Transition(node.state, action)
+            gPrime = problem.StepCost(node.state, action, newState)
+            fPrime =  gPrime + problem.CallHeuristic(newState)
+            if newState not in best_g or gPrime < best_g[newState]:
+                best_g[newState] = gPrime
+                frontier.put((fPrime, next(counter), Node(newState, action, node)))
     return None
-
-
 
 algorithms = {
     "AStar" : AStar
