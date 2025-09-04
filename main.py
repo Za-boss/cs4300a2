@@ -1,43 +1,78 @@
+import random
 import core
 import argparse
 import domains.eightPuzzle
-def main():
-    parser = argparse.ArgumentParser(description="Agent runner")
-    parser.add_argument('--algo', type=str, required=False, default="AStar", choices=core.algorithms.keys())
-    parser.add_argument('--configurationCount', '--cc', type=int, required=False, default=1)
-    parser.add_argument('--heuristic', '--h', type=str, required=False, default='null', choices=domains.eightPuzzle.heuristics.keys())
-    args = parser.parse_args()
-    algorithm = core.algorithms[args.algo]
-    configurationCount = args.configurationCount
-    heuristic = domains.eightPuzzle.heuristics[args.heuristic]
-    
-    # when you come back to this, make it so that the domain will generate a default configuration and get ready to start testing on that
-    # random state generation will come after the program seems to be working
-    initialState = domains.eightPuzzle.puzzleState((
-            8, 1, 2,
-            3, 4, 5,
-            6, 7, 0
-        )
+def countInversions(state):
+    tiles = [x for x in state if x != 0]
+    inversions = 0
+    for i in range(len(tiles)):
+        for j in range(i+1, len(tiles)):
+            if tiles[i] > tiles[j]:
+                inversions += 1
+    return inversions
+def isSolvable(state):
+    return countInversions(state) % 2 == 0 
+def generatePuzzles(number, goalState : domains.eightPuzzle.puzzleState):
+    seen = set()
+    while (len(seen) < number):
+        state = list(goalState.puzzle)
+        random.shuffle(state)
+        state = tuple(state)
+        if isSolvable(state) and state not in seen:
+            state = domains.eightPuzzle.puzzleState(state)
+            seen.add(state)
+    return list(seen)
+def printStats(runID, configurationId, stats, heuristic):
+    print(
+        f"{runID},"
+        f"{configurationId},"
+        f"{heuristic},"
+        f"{stats.nodesExpanded},"
+        f"{stats.nodesGenerated},"
+        f"{stats.maxFrontierSize},"
+        f"{stats.solutionCost},"
+        f"{stats.solutionDepth}"
     )
-    initialStateEasy = domains.eightPuzzle.puzzleState((
-            1, 2, 5,
-            3, 4, 8,
-            0, 6, 7
-    ))
+def main():
     goalState = domains.eightPuzzle.puzzleState((
             0, 1, 2,
             3, 4, 5,
             6, 7, 8
-        )   
+        )
     )
-    #moves seem to be fine, but with state = initialState the loop seems to run for a very long time, I think there's something wrong with the algorithm itself
-    #To try to solve this try the following
-    #1. implement and use the misplaced heuristic and see if it fixes things
-    #2. make sure costs are being computed correctly, there might be some problems with it and you should make sure it is being computed correctly
-    #3. Make sure that the best_g map and frontier are working correctly, they may not be working correctly and you'll need to check it out
-    #4. Try something else if you need to, ask the professor about it and see if he has anything to say, just throw things at the wall until somethin sticks
-    problem = domains.eightPuzzle.puzzleProblem(initialStateEasy, goalState, heuristic)
-    print(len(algorithm(problem)))
+    parser = argparse.ArgumentParser(description="Agent runner")
+    parser.add_argument('--algo', type=str, required=False, default="AStar", choices=core.algorithms.keys())
+    parser.add_argument('--configurationCount', '--cc', type=int, required=False, default=1)
+    parser.add_argument('--heuristic', '--h', type=str, required=False, default='null', choices=list(domains.eightPuzzle.heuristics.keys()) + ["all"])
+    parser.add_argument('--seed', '--s', type=int, required=False)
+    args = parser.parse_args()
+    algorithm = core.algorithms[args.algo]
+    configurationCount = args.configurationCount
+    heuristic = args.heuristic
+    seed = args.seed
+    if not seed:
+        seed = random.randrange(1000000)
+    random.seed(seed)
+    print(f"Configuration Seed: {seed}")
+    configurations = generatePuzzles(configurationCount, goalState)
+    runId = 0
+    if heuristic == "all":
+        for key, heuristicFunc in domains.eightPuzzle.heuristics.items():
+            configurationId = 0
+            for configuration in configurations:
+                problem = domains.eightPuzzle.puzzleProblem(configuration, goalState, heuristicFunc)
+                path, stats = algorithm(problem)
+                if path and stats:
+                    printStats(runId, configurationId, stats, key)
+                runId += 1
+                configurationId += 1
+    else:
+        for configuration in configurations:
+            problem = domains.eightPuzzle.puzzleProblem(configuration, goalState, domains.eightPuzzle.heuristics[heuristic])
+            path, stats = algorithm(problem)
+            if path and stats:
+                printStats(runId, runId, stats, heuristic)
+            runId += 1
 
     
 
